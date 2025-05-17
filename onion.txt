@@ -1,0 +1,27 @@
+devpack_backend/
+├── cmd/
+│   └── main.go                     // Fiber app ve route'lar burada başlatılır
+├── config/
+│   └── database.go
+│   └── jwt.go
+├── internal/
+│   ├── domain/
+│   │   ├── entity/
+│   │   │   └── user.go             // sadece struct
+│   │   ├── repository/
+│   │   │   └── user_repository.go  // interface
+│   │   └── usecase/
+│   │       └── user_usecase.go     // interface
+│   ├── usecase/
+│   │   └── user_usecase_impl.go    // interfacelerin gerçek implementasyonları
+│   ├── infrastructure/
+│   │   └── user_repository_impl.go // repository'nin GORM implementasyonu
+│   ├── delivery/
+│   │   └── http/
+│   │       └── user_handler.go     // HTTP handler fonksiyonları
+│   └── middlewares/
+│       └── jwt.go
+├── pkg/                            // utils, helpers
+│   └── ...
+├── .env
+├── go.mod
