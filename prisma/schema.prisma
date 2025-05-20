@@ -1,0 +1,334 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+
+enum KundeType {
+  PRIVAT
+  GESCHAEFT
+  INDIVIDUAL
+}
+
+enum AddressType {
+  PERSONAL
+  DELIVERY
+  BILLING
+}
+
+
+
+// Models
+
+
+model TaxType {
+  id          Int      @id @default(autoincrement())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  name        String   // örn: "KDV", "ÖTV"
+  code        String   @unique // örn: "vat", "excise"
+  rate        Float    // örn: 0.19 → %19
+  isActive    Boolean  @default(true)
+
+  products    Product[]
+}
+
+model Product {
+  id            Int       @id @default(autoincrement())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+  isDeleted     Boolean   @default(false)
+  isActive      Boolean   @default(true)
+
+  name          String
+  slug          String    @unique
+  description   String?
+  priceNet      Float     // Vergisiz fiyat
+  priceGross    Float     // Vergi dahil fiyat
+
+  isOnHomepage  Boolean   @default(false)
+  isOffer       Boolean   @default(false)
+  stockAmount   Int
+  stockCode     String    @unique
+  expiryDate    DateTime?
+  companyName   String?
+  stars         Int?
+
+  imageUrl      String?
+  thumbnailUrl  String?
+  barcode       String?
+  unit          String?
+
+  // Vergi ilişkisi
+  taxType       TaxType?   @relation(fields: [taxTypeId], references: [id])
+  taxTypeId     Int?
+
+  // Diğer ilişkiler
+  categories    Category[] @relation("ProductCategories", references: [id])
+  supplier      ProductSupplier? @relation(fields: [supplierId], references: [id])
+  supplierId    Int?
+
+  cartItems     CartItem[]
+  wishlistItems WishlistItem[]
+  orderItems    OrderItem[]
+}
+
+
+model ProductSupplier {
+  id            Int       @id @default(autoincrement())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+  isDeleted     Boolean   @default(false)
+  isActive      Boolean   @default(true)
+
+  type          String     // 'firma', 'birey', 'anonim'
+  kundeId       Int        // PrivatKunde, GeschaftKunde, IndividualKunde gibi
+  kundeType     KundeType  // enum ile tutulacak
+
+  contactInfo   String?
+  notes         String?
+
+  products      Product[]
+}
+
+
+model Address {
+  id            Int         @id @default(autoincrement())
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  deletedAt     DateTime?
+  isDeleted     Boolean     @default(false)
+  isActive      Boolean     @default(true)
+
+  kundeId       Int
+  kundeType     KundeType   // ENUM: PRIVAT, GESCHAEFT, INDIVIDUAL
+  type          AddressType // PERSONAL, DELIVERY, BILLING
+
+  title         String?     // örnek: “Berlin Depo”, “Ev Adresi”
+  street        String
+  postalCode    String
+  city          String
+  country       String
+  companyName   String?
+  taxNumber     String?
+  phone         String?
+  notes         String?
+}
+
+model Category {
+  id            Int       @id @default(autoincrement())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+  isDeleted     Boolean   @default(false)
+  isActive      Boolean   @default(true)
+
+  name          String
+  description   String?
+  slug          String    @unique
+  imageUrl      String?
+
+  // Çoka çok ilişki (Product ile)
+  products      Product[] @relation("ProductCategories")
+}
+
+
+// Müşteri Tipleri
+
+model PrivatKunde {
+  id            Int       @id @default(autoincrement())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+  isDeleted     Boolean   @default(false)
+  isActive      Boolean   @default(true)
+
+  firstName     String
+  lastName      String
+  email         String    @unique
+  password      String
+  phone         String?
+  birthDate     DateTime?
+  gender        String?
+  notes         String?
+
+  // İlişkiler
+  addresses       Address[]
+  cartItems       CartItem[]
+  wishlistItems   WishlistItem[]
+  orders          Order[]
+  // productSupplies ProductSupplier[] // opsiyonel ilişki kurulacaksa sonra
+}
+
+model GeschaftKunde {
+  id            Int       @id @default(autoincrement())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+  isDeleted     Boolean   @default(false)
+  isActive      Boolean   @default(true)
+
+  companyName   String
+  taxNumber     String
+  industry      String?
+  contactPerson String?     // örnek: "Mehmet Yılmaz"
+  email         String      @unique
+  phone         String?
+  password      String?
+  notes         String?
+
+  // İlişkiler
+  addresses       Address[]
+  cartItems       CartItem[]
+  wishlistItems   WishlistItem[]
+  orders          Order[]
+  contracts       Contract[]
+}
+
+model IndividualKunde {
+  id            Int       @id @default(autoincrement())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+  isDeleted     Boolean   @default(false)
+  isActive      Boolean   @default(true)
+
+  name          String
+  phone         String?
+  email         String?
+  notes         String?
+
+  // İlişkiler
+  addresses       Address[]
+  orders          Order[]
+}
+
+
+model Contract {
+  id              Int       @id @default(autoincrement())
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+  isDeleted       Boolean   @default(false)
+  isActive        Boolean   @default(true)
+
+  geschaftKunde   GeschaftKunde @relation(fields: [geschaftKundeId], references: [id])
+  geschaftKundeId Int
+
+  title           String
+  startDate       DateTime
+  endDate         DateTime?
+  contractFileUrl String?   // PDF olarak saklanabilir
+  terms           String?   // metinsel açıklamalar
+  status          String    // örn: "active", "expired", "pending"
+}
+
+//Orders
+
+model Order {
+  id            Int       @id @default(autoincrement())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now())
+  deletedAt     DateTime?
+  isDeleted     Boolean   @default(false)
+  isActive      Boolean   @default(true)
+
+  kundeId       Int
+  kundeType     KundeType
+
+  totalAmount   Float
+  discountCode  String?       // örn: "YAZ20"
+  discountValue Float?        // toplam sipariş indirimi (örn. 15.00)
+  finalAmount   Float         // totalAmount - discountValue
+
+  status        String        // pending, completed, cancelled
+  paymentMethod String?
+  paid          Boolean       @default(false)
+  notes         String?
+
+  items         OrderItem[]
+}
+
+
+
+model OrderItem {
+  id               Int       @id @default(autoincrement())
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  order            Order     @relation(fields: [orderId], references: [id])
+  orderId          Int
+
+  product          Product   @relation(fields: [productId], references: [id])
+  productId        Int
+
+  quantity         Int
+  unitPrice        Float     // sipariş anındaki net fiyat
+  discountPercent  Float?    // ürün bazlı indirim (örn. %20)
+  priceBeforeTax   Float
+  priceAfterTax    Float
+  taxRate          Float
+  taxType          String?
+
+  // Snapshot alanları
+  productName      String
+  productImageUrl  String?
+  productSlug      String?
+  productUnit      String?
+}
+
+
+// Carts 
+model Cart {
+  id            Int       @id @default(autoincrement())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now())
+  isConverted   Boolean   @default(false)  // siparişe dönüştü mü?
+
+  kundeId       Int
+  kundeType     KundeType
+
+  cartItems     CartItem[]
+}
+
+
+model CartItem {
+  id            Int       @id @default(autoincrement())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now())
+
+  cart          Cart      @relation(fields: [cartId], references: [id])
+  cartId        Int
+
+  product       Product   @relation(fields: [productId], references: [id])
+  productId     Int
+
+  quantity      Int       @default(1)
+}
+
+model WishlistItem {
+  id            Int       @id @default(autoincrement())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now())
+
+  product       Product   @relation(fields: [productId], references: [id])
+  productId     Int
+
+  kundeId       Int
+  kundeType     KundeType
+}
